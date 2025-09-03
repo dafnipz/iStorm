@@ -10,12 +10,11 @@ if not openai.api_key:
     st.error("Please set your OPENAI_API_KEY in environment variables.")
 
 # --- Φόρτωση datasets ---
-users_file = "users.csv"
-products_file = "products.csv"
+users_file = "https://raw.githubusercontent.com/dafnipz/iStorm/refs/heads/main/20250903_Users.csv"
+products_file = "https://raw.githubusercontent.com/dafnipz/iStorm/refs/heads/main/20250903_ProductList.csv"
 
-users_df = pd.read_csv(users_file, encoding="utf-8")
-products_df = pd.read_csv(products_file, encoding="utf-8")
-
+users_df = pd.read_csv(users_file, sep=';', encoding='utf-8')
+products_df = pd.read_csv(products_file, sep=';', encoding='utf-8')
 # --- Session state initialization ---
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -151,3 +150,4 @@ if st.session_state.logged_in:
             st.write(f"🛒 {item}")
     else:
         st.write("Your cart is empty.")
+
