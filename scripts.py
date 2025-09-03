@@ -1,140 +1,120 @@
 import streamlit as st
 import pandas as pd
-import os
-from datetime import date
-import openai
+from datetime import datetime
 
-# ======================
-# OpenAI API
-# ======================
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# ----------------- Φόρτωση δεδομένων -----------------
+users_file = "https://raw.githubusercontent.com/dafnipz/iStorm/main/20250903_Users.csv"
+products_file = "https://raw.githubusercontent.com/dafnipz/iStorm/main/20250903_ProductList.csv"
 
-# ======================
-# LOAD CSVs
-# ======================
-users_file = "https://raw.githubusercontent.com/dafnipz/iStorm/refs/heads/main/20250903_Users.csv"
-products_file = "https://raw.githubusercontent.com/dafnipz/iStorm/refs/heads/main/20250903_ProductList.csv"
+users_df = pd.read_csv(users_file, sep=";")
+products_df = pd.read_csv(products_file, sep=";")
 
-users_df = pd.read_csv(users_file, sep=';', encoding='utf-8')
-products_df = pd.read_csv(products_file, sep=';', encoding='utf-8')
-
-# Clean & rename columns
+# Καθαρισμός whitespace στα ονόματα στηλών
 users_df.columns = users_df.columns.str.strip()
-users_df.rename(columns={
-    users_df.columns[0]: 'username',
-    users_df.columns[1]: 'password',
-    users_df.columns[2]: 'first_name',
-    users_df.columns[3]: 'last_name',
-    users_df.columns[4]: 'dob',
-    users_df.columns[5]: 'city',
-    users_df.columns[6]: 'profession',
-    users_df.columns[7]: 'interests',
-    users_df.columns[8]: 'budget',
-    users_df.columns[9]: 'tech_level',
-    users_df.columns[10]: 'lifestyle',
-    users_df.columns[11]: 'goals',
-    users_df.columns[12]: 'devices_owned'
-}, inplace=True)
+products_df.columns = products_df.columns.str.strip()
 
-# ======================
-# Streamlit UI
-# ======================
-st.title("iStorm Apple Store")
-
-menu = ["Login", "Sign Up", "Forgot Password"]
-choice = st.sidebar.selectbox("Menu", menu)
-
-# ======================
-# SIGN UP
-# ======================
-if choice == "Sign Up":
-    st.subheader("Create a new account")
-    new_username = st.text_input("Username")
-    new_password = st.text_input("Password", type='password')
-    email = st.text_input("Email")
-    first_name = st.text_input("First Name")
-    last_name = st.text_input("Last Name")
-    dob = st.date_input("Date of Birth", min_value=date(1,1,1), max_value=date.today())
-    city = st.text_input("City")
-    profession = st.text_input("Profession")
-    interests = st.text_input("Interests (comma separated)")
-    budget = st.selectbox("Budget", ["low", "medium", "high"])
-    tech_level = st.selectbox("Tech Level", ["beginner", "intermediate", "advanced"])
-    lifestyle = st.text_input("Lifestyle (comma separated)")
-    goals = st.text_input("Goals (comma separated)")
-    devices_owned = st.text_input("Devices Owned (comma separated)")
-
-    if st.button("Sign Up"):
-        if new_username in users_df['username'].values:
-            st.warning("Username already exists!")
-        elif email in users_df['email'].values if 'email' in users_df.columns else False:
-            st.warning("Email already used!")
-        else:
-            new_row = {
-                "username": new_username,
-                "password": new_password,
-                "email": email,
-                "first_name": first_name,
-                "last_name": last_name,
-                "dob": str(dob),
-                "city": city,
-                "profession": profession,
-                "interests": interests,
-                "budget": budget,
-                "tech_level": tech_level,
-                "lifestyle": lifestyle,
-                "goals": goals,
-                "devices_owned": devices_owned
-            }
-            users_df = pd.concat([users_df, pd.DataFrame([new_row])], ignore_index=True)
-            st.success("Account created! Please login.")
-
-# ======================
-# LOGIN
-# ======================
-if choice == "Login":
-    st.subheader("Login")
-    username = st.text_input("Username")
-    password = st.text_input("Password", type='password')
+# ----------------- Συναρτήσεις -----------------
+def login():
+    st.markdown("## 👋 Welcome (back)")
+    username_or_email = st.text_input("Username or Email")
+    password = st.text_input("Password", type="password")
 
     if st.button("Login"):
-        user_row = users_df[(users_df['username'] == username) & (users_df['password'] == password)]
+        # Έλεγχος χρήστη
+        user_row = users_df[
+            ((users_df['username'] == username_or_email) | 
+             (users_df['email'] == username_or_email)) &
+            (users_df['password'] == password)
+        ]
+
         if not user_row.empty:
-            st.success(f"Welcome {user_row.iloc[0]['first_name']}!")
-
-            # AI Recommendations sample
-            st.subheader("Recommended for you:")
-            profession = user_row.iloc[0]['profession']
-            interests = user_row.iloc[0]['interests'].split(",")
-
-            recommended = products_df[
-                (products_df['target_profession'].str.contains(profession, case=False)) |
-                (products_df['target_interests'].apply(lambda x: any(i.lower() in x.lower() for i in interests)))
+            st.session_state["user"] = user_row.iloc[0].to_dict()
+            st.success(f"✅ Welcome {st.session_state['user']['first_name']}!")
+            st.session_state["page"] = "recommendations"
+        else:
+            st.error("❌ Username/Password incorrect")
+            # Έλεγχος αν υπάρχει ο χρήστης (για recover)
+            user_check = users_df[
+                (users_df['username'] == username_or_email) |
+                (users_df['email'] == username_or_email)
             ]
-
-            for idx, row in recommended.head(4).iterrows():
-                st.write(f"**{row['name']}** ({row['category']}) - ${row['price']}")
-                st.write(f"[Go to product]({row['url']})")
-                if st.button(f"Add {row['name']} to cart", key=idx):
-                    st.success(f"{row['name']} added to cart!")
-
-        else:
-            st.error("Username/Password incorrect")
-
-# ======================
-# FORGOT PASSWORD
-# ======================
-if choice == "Forgot Password":
-    st.subheader("Recover your password")
-    email_input = st.text_input("Enter your registered email")
-    if st.button("Recover Password"):
-        if 'email' not in users_df.columns:
-            st.error("No email information available.")
-        else:
-            user_row = users_df[users_df['email'] == email_input]
-            if not user_row.empty:
-                st.info(f"Your username: {user_row.iloc[0]['username']}")
-                st.info(f"Your password: {user_row.iloc[0]['password']}")
+            if not user_check.empty:
+                st.warning("Ξέχασες τον κωδικό σου;")
+                if st.button("Recover password"):
+                    st.info(f"📧 Σου στείλαμε mail στο: {user_check.iloc[0]['email']}")
             else:
-                st.error("Email not found")
+                st.info("Ο χρήστης δεν βρέθηκε. Θέλεις να κάνεις εγγραφή;")
+
+    st.markdown("---")
+    st.write("Not signed up yet?")
+    if st.button("👉 Sign up"):
+        st.session_state["page"] = "signup"
+
+def signup():
+    st.markdown("## 📝 Sign Up")
+
+    new_user = {}
+    new_user["username"] = st.text_input("Choose a username")
+    new_user["email"] = st.text_input("Email")
+    new_user["password"] = st.text_input("Password", type="password")
+    new_user["first_name"] = st.text_input("First name")
+    new_user["last_name"] = st.text_input("Last name")
+    new_user["dob"] = st.date_input("Date of Birth", value=datetime(1990, 1, 1),
+                                    min_value=datetime(1, 1, 1),
+                                    max_value=datetime.now())
+    new_user["city"] = st.text_input("City")
+    new_user["profession"] = st.text_input("Profession")
+    new_user["interests"] = st.text_area("Interests (comma separated)")
+    new_user["budget"] = st.selectbox("Budget", ["low", "medium", "high"])
+    new_user["tech_level"] = st.selectbox("Tech Level", ["beginner", "intermediate", "advanced"])
+    new_user["lifestyle"] = st.text_area("Lifestyle (comma separated)")
+    new_user["goals"] = st.text_area("Goals (comma separated)")
+    new_user["devices_owned"] = st.text_area("Devices Owned (comma separated)")
+
+    if st.button("Create Account"):
+        # append τον νέο χρήστη (προσοχή: δεν σώζεται πίσω στο GitHub, μόνο runtime!)
+        global users_df
+        users_df = pd.concat([users_df, pd.DataFrame([new_user])], ignore_index=True)
+        st.success("🎉 Account created successfully! Please login.")
+        st.session_state["page"] = "login"
+
+def recommendations():
+    st.markdown("## 🎯 Personalized Recommendations")
+
+    user = st.session_state["user"]
+    st.write(f"Hello {user['first_name']} 👋, here are your suggestions:")
+
+    # Φιλτράρισμα προϊόντων
+    recs = products_df[
+        (products_df['target_profession'].isin([user["profession"], "All"])) |
+        (products_df['target_interests'].apply(lambda x: any(i in user["interests"] for i in str(x).split(","))))
+    ]
+
+    if recs.empty:
+        st.info("Δεν βρέθηκαν προτάσεις για εσένα 🙁")
+    else:
+        for _, row in recs.iterrows():
+            st.subheader(row["name"])
+            st.write(f"💰 Price: {row['price']} €")
+            st.write(f"📌 Category: {row['category']}")
+            st.markdown(f"[🔗 Learn more]({row['url']})")
+            if st.button(f"➕ Add {row['name']} to Cart", key=row["id"]):
+                st.success(f"✅ {row['name']} added to cart!")
+
+    if st.button("🔒 Logout"):
+        st.session_state.clear()
+        st.session_state["page"] = "login"
+
+# ----------------- Navigation -----------------
+if "page" not in st.session_state:
+    st.session_state["page"] = "login"
+
+if st.session_state["page"] == "login":
+    login()
+elif st.session_state["page"] == "signup":
+    signup()
+elif st.session_state["page"] == "recommendations":
+    recommendations()
+
+
 
