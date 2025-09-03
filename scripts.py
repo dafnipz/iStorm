@@ -16,14 +16,14 @@ products_df.columns = products_df.columns.str.strip()
 # ----------------- Συναρτήσεις -----------------
 def login():
     st.markdown("## 👋 Welcome (back)")
-    username_or_email = st.text_input("Username or Email")
+    username_or_email = st.text_input("Username or E-mail")
     password = st.text_input("Password", type="password")
 
     if st.button("Login"):
-        # Έλεγχος χρήστη με username ή email
+        # Έλεγχος χρήστη με username ή E-mail
         user_row = users_df[
             ((users_df['username'] == username_or_email) |
-             (users_df['email'] == username_or_email)) &
+             (users_df['E-mail'] == username_or_email)) &
             (users_df['password'] == password)
         ]
 
@@ -42,11 +42,11 @@ def login():
             with col2:
                 user_check = users_df[
                     (users_df['username'] == username_or_email) |
-                    (users_df['email'] == username_or_email)
+                    (users_df['E-mail'] == username_or_email)
                 ]
                 if not user_check.empty:
                     if st.button("📧 Ανάκτηση Κωδικού"):
-                        st.info(f"Σου στείλαμε mail στο: {user_check.iloc[0]['email']}")
+                        st.info(f"Σου στείλαμε mail στο: {user_check.iloc[0]['E-mail']}")
 
     st.markdown("---")
     st.write("Not signed up yet?")
@@ -58,7 +58,7 @@ def signup():
 
     new_user = {}
     new_user["username"] = st.text_input("Choose a username")
-    new_user["email"] = st.text_input("Email")
+    new_user["E-mail"] = st.text_input("E-mail")
     new_user["password"] = st.text_input("Password", type="password")
     new_user["first_name"] = st.text_input("First name")
     new_user["last_name"] = st.text_input("Last name")
@@ -112,7 +112,5 @@ if "page" not in st.session_state:
 
 if st.session_state["page"] == "login":
     login()
-elif st.session_state["page"] == "signup":
-    signup()
-elif st.session_state["page"] == "recommendations":
-    recommendations()
+elif st.session_state["page"] == "s_
+
