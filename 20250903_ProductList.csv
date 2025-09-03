@@ -1,0 +1,9 @@
+﻿id;name;category;price;target_profession;target_interests;url
+1;Apple Watch Ultra;product;999;Diver;fitness,outdoor sports;https://www.istorm.gr/collections/apple-watch-ultra
+2;iPhone 15;product;1500;All;tech,photography;https://www.istorm.gr/collections/iphone-15-family
+3;iPad Pro;product;1200;Designer;art,tech;https://www.istorm.gr/collections/ipad-pro
+4;MacBook Air;product;1100;Software Engineer;tech,productivity;https://www.istorm.gr/collections/macbook-air
+5;AirPods Pro;product;250;All;music,travel,fitness;https://www.istorm.gr/collections/airpods-pro
+6;iSupport;service;150;All;All;https://istorm.gr/applecare
+7;iPlus;service;50;All;All;https://istorm.gr/icloud
+;;;;;;
