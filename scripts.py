@@ -15,13 +15,15 @@ users_df.columns = users_df.columns.str.strip()
 products_df.columns = products_df.columns.str.strip()
 
 # ----------------- Συναρτήσεις -----------------
+def is_latin(s):
+    return all(ord(c) < 128 for c in str(s))
+
 def login():
     st.markdown("## 👋 Welcome (back)")
     username_or_email = st.text_input("Username or Email")
     password = st.text_input("Password", type="password")
 
     if st.button("Login"):
-        # Έλεγχος χρήστη με username ή email
         user_row = users_df[
             ((users_df['username'] == username_or_email) |
              (users_df['E-mail'] == username_or_email)) &
@@ -31,7 +33,7 @@ def login():
         if not user_row.empty:
             st.session_state["user"] = user_row.iloc[0].to_dict()
             st.session_state["page"] = "recommendations"
-            st.session_state["welcome_shown"] = False  # για να εμφανιστεί το welcome message
+            st.session_state["welcome_shown"] = False  # reset welcome
         else:
             st.error("❌ Λάθος Username/E-mail ή Κωδικός")
             col1, col2 = st.columns(2)
@@ -52,45 +54,122 @@ def login():
     if st.button("👉 Sign up"):
         st.session_state["page"] = "signup"
 
+def signup():
+    st.markdown("## 📝 Sign Up")
+
+    new_user = {}
+    errors = []
+
+    # ----------------- Inputs -----------------
+    new_user["username"] = st.text_input("Choose a username")
+    if new_user["username"] == "" or not is_latin(new_user["username"]):
+        errors.append("Username")
+
+    new_user["E-mail"] = st.text_input("E-mail")
+    if new_user["E-mail"] == "" or not is_latin(new_user["E-mail"]):
+        errors.append("E-mail")
+
+    new_user["password"] = st.text_input("Password", type="password")
+    if new_user["password"] == "":
+        errors.append("Password")
+
+    new_user["first_name"] = st.text_input("First name")
+    if new_user["first_name"] == "" or not is_latin(new_user["first_name"]):
+        errors.append("First Name")
+
+    new_user["last_name"] = st.text_input("Last name")
+    if new_user["last_name"] == "" or not is_latin(new_user["last_name"]):
+        errors.append("Last Name")
+
+    # Date of birth
+    new_user["dob"] = st.date_input("Date of Birth", value=datetime(1990, 1, 1),
+                                    min_value=datetime(1, 1, 1),
+                                    max_value=datetime.now())
+
+    # Choose city from Greece
+    cities = ["Athens", "Thessaloniki", "Patras", "Heraklion", "Larissa", "Volos", "Ioannina", "Chania"]
+    new_user["city"] = st.selectbox("City of Residence", cities)
+
+    # Choose profession
+    professions = ["Student", "Teacher", "Engineer", "Doctor", "Artist", "Freelancer", "Retired", "Entrepreneur"]
+    new_user["profession"] = st.selectbox("Profession", professions)
+
+    # Interests (multi-select)
+    interests_list = ["Fitness", "Travel", "Technology", "Cooking", "Gaming", "Music", "Photography", "Reading", "Art", "Sports"]
+    new_user["interests"] = st.multiselect("What are your main interests? (Choose up to 5)", interests_list)
+
+    new_user["budget"] = st.selectbox("Budget", ["low", "medium", "high"])
+    new_user["tech_level"] = st.selectbox("Tech Level", ["beginner", "intermediate", "advanced"])
+
+    lifestyle_list = ["Outdoor", "Indoor", "Social", "Solitary", "Family-oriented", "Work-focused", "Travel-loving", "Fitness-focused"]
+    new_user["lifestyle"] = st.multiselect("Lifestyle Preferences (Choose up to 5)", lifestyle_list)
+
+    goals_list = ["Health", "Education", "Career", "Creativity", "Entertainment", "Productivity", "Financial", "Travel"]
+    new_user["goals"] = st.multiselect("Your Goals (Choose up to 5)", goals_list)
+
+    devices_list = ["iPhone", "Android Phone", "iPad", "Laptop", "Desktop", "Mac", "PC", "Camera", "Smartwatch"]
+    new_user["devices_owned"] = st.multiselect("Devices you own", devices_list)
+
+    if st.button("Create Account"):
+        if errors:
+            st.error(f"❌ Please fill correctly: {', '.join(errors)}")
+        else:
+            global users_df
+            users_df = pd.concat([users_df, pd.DataFrame([new_user])], ignore_index=True)
+            st.success("🎉 Account created successfully! Please login.")
+            st.session_state["page"] = "login"
+
 def recommendations():
     user = st.session_state["user"]
 
-    # ----------------- Welcome Message 3 δευτ -----------------
+    # ----------------- Welcome Message -----------------
     if not st.session_state.get("welcome_shown", False):
         placeholder = st.empty()
-        placeholder.success(f"🎉 Welcome {user['first_name']}! Let's find your perfect match!")
+        placeholder.success(f"🎉 Welcome {user['first_name']}! Here are suggestions for you!")
         time.sleep(3)
         placeholder.empty()
         st.session_state["welcome_shown"] = True
 
     st.markdown("## 🎯 Personalized Recommendations")
-    st.write(f"Hello {user['first_name']} 👋, here are your suggestions:")
-
-    # Φιλτράρισμα προϊόντων και υπηρεσιών
+    
+    # Filter recommendations
     recs = products_df[
         (products_df['target_profession'].isin([user["profession"], "All"])) |
         (products_df['target_interests'].apply(lambda x: any(i in user["interests"] for i in str(x).split(","))))
     ]
 
-    if recs.empty:
-        st.info("Δεν βρέθηκαν προτάσεις για εσένα 🙁")
-    else:
-        # Εμφάνιση 2 προϊόντων και 2 υπηρεσιών
-        product_count, service_count = 0, 0
-        for _, row in recs.iterrows():
-            if "product" in row['category'].lower() and product_count < 2:
-                st.subheader(row["name"])
-                st.write(f"💰 Price: {row['price']} €")
-                st.write(f"📌 Category: {row['category']}")
-                st.markdown(f"[🔗 Learn more]({row['url']})")
-                product_count += 1
-            elif "service" in row['category'].lower() and service_count < 2:
-                st.subheader(row["name"])
-                st.write(f"📌 Category: {row['category']}")
-                st.markdown(f"[🔗 Learn more]({row['url']})")
-                service_count += 1
-            if product_count >= 2 and service_count >= 2:
-                break
+    # ----------------- Products -----------------
+    product_recs = recs[recs['category'].str.lower().str.contains("product")].head(2)
+    if not product_recs.empty:
+        st.markdown("### 🛍️ Products")
+        cols = st.columns(len(product_recs))
+        for idx, (_, row) in enumerate(product_recs.iterrows()):
+            with cols[idx]:
+                st.markdown(f"""
+                    <div style="padding:15px; border:1px solid #eee; border-radius:10px; box-shadow: 2px 2px 5px #ddd;">
+                        <h4 style="color:#4CAF50;">{row['name']}</h4>
+                        <p>💰 Price: {row['price']} €</p>
+                        <p>📌 Category: {row['category']}</p>
+                        <a href="{row['url']}" target="_blank">🔗 Learn more</a>
+                    </div>
+                    """, unsafe_allow_html=True)
+                if st.button(f"➕ Add {row['name']} to Cart", key=row["id"]):
+                    st.success(f"✅ {row['name']} added to cart!")
+
+    # ----------------- Services -----------------
+    service_recs = recs[recs['category'].str.lower().str.contains("service")].head(2)
+    if not service_recs.empty:
+        st.markdown("### 🛠️ Services")
+        cols = st.columns(len(service_recs))
+        for idx, (_, row) in enumerate(service_recs.iterrows()):
+            with cols[idx]:
+                st.markdown(f"""
+                    <div style="padding:15px; border:1px solid #eee; border-radius:10px; box-shadow: 2px 2px 5px #ddd;">
+                        <h4 style="color:#2196F3;">{row['name']}</h4>
+                        <p>📌 Category: {row['category']}</p>
+                        <a href="{row['url']}" target="_blank">🔗 Learn more</a>
+                    </div>
+                    """, unsafe_allow_html=True)
 
     if st.button("🔒 Logout"):
         st.session_state.clear()
@@ -103,10 +182,11 @@ if "page" not in st.session_state:
 if st.session_state["page"] == "login":
     login()
 elif st.session_state["page"] == "signup":
-    # εδώ μπαίνει η signup function σου
-    pass
+    signup()
 elif st.session_state["page"] == "recommendations":
     recommendations()
+
+
 
 
 
