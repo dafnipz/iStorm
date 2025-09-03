@@ -14,53 +14,16 @@ products_df = pd.read_csv(products_file, sep=";")
 users_df.columns = users_df.columns.str.strip()
 products_df.columns = products_df.columns.str.strip()
 
-# ----------------- Validation -----------------
-def validate_user_input(user):
-    missing = [k for k,v in user.items() if v==""]
-    nonlatin = [k for k,v in user.items() if not re.match(r'^[A-Za-z0-9, @._-]*$', str(v))]
+# ----------------- Validation Functions -----------------
+def is_latin(s):
+    return re.match(r'^[A-Za-z0-9 ,]*$', s) is not None
+
+def validate_user_input(user_dict):
+    missing = [k for k, v in user_dict.items() if not v]
+    nonlatin = [k for k, v in user_dict.items() if isinstance(v, str) and v and not is_latin(v)]
     return missing, nonlatin
 
-# ----------------- Συναρτήσεις -----------------
-def login():
-    st.markdown("## 👋 Welcome (back)")
-    username_or_email = st.text_input("Username or Email")
-    password = st.text_input("Password", type="password")
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        if st.button("Login"):
-            user_row = users_df[
-                ((users_df['username'] == username_or_email) |
-                 (users_df['E-mail'] == username_or_email)) &
-                (users_df['password'] == password)
-            ]
-
-            if not user_row.empty:
-                st.session_state["user"] = user_row.iloc[0].to_dict()
-                st.success(f"✅ Welcome {st.session_state['user']['first_name']}!")
-                st.session_state["page"] = "recommendations"
-            else:
-                st.error("❌ Wrong Username/Email or Password")
-                st.session_state["recover_visible"] = True
-
-    with col2:
-        if st.session_state.get("recover_visible", False):
-            st.warning("Forgot your password?")
-            if st.button("📧 Recover password"):
-                username_email_input = st.text_input("Enter your email to recover")
-                if username_email_input:
-                    user_check = users_df[users_df['E-mail'] == username_email_input]
-                    if not user_check.empty:
-                        st.success(f"Recovery email sent to: {username_email_input}")
-                    else:
-                        st.error("Email not found!")
-
-    st.markdown("---")
-    st.write("Not signed up yet?")
-    if st.button("👉 Sign up"):
-        st.session_state["page"] = "signup"
-
+# ----------------- Signup Function -----------------
 def signup():
     st.markdown("## 📝 Sign Up")
 
@@ -74,13 +37,11 @@ def signup():
                                     min_value=datetime(1,1,1),
                                     max_value=datetime.now())
     
-    # Dropdown πόλης
     greek_cities = ["Athens", "Thessaloniki", "Patras", "Heraklion", "Larissa",
                     "Volos", "Ioannina", "Chania", "Rhodes", "Kavala", "Kalamata",
                     "Corfu", "Agrinio", "Trikala", "Chios", "Mytilene"]
     new_user["city"] = st.selectbox("City", greek_cities)
     
-    # Dropdown επαγγέλματος
     professions = ["Software Engineer", "Doctor", "Teacher", "Student", "Artist",
                    "Photographer", "Engineer", "Designer", "Chef", "Musician",
                    "Writer", "Researcher", "Entrepreneur", "Consultant", "Nurse"]
@@ -89,16 +50,23 @@ def signup():
     st.markdown("### What are your main interests? (Choose up to 5)")
     interests_options = ["fitness", "travel", "tech", "music", "art", "photography",
                          "gaming", "reading", "fashion", "food"]
-    selected_interests = st.multiselect("", interests_options, max_selections=5)
-    new_user["interests"] = ",".join(selected_interests)
+    new_user["interests"] = ",".join(st.multiselect("", interests_options, max_selections=5))
     
     new_user["budget"] = st.selectbox("Budget", ["low", "medium", "high"])
     new_user["tech_level"] = st.selectbox("Tech Level", ["beginner", "intermediate", "advanced"])
     
-    new_user["lifestyle"] = st.text_area("Lifestyle Preferences (comma separated, latin characters only)")
-    new_user["goals"] = st.text_area("Your goals (comma separated, latin characters only)")
-    new_user["devices_owned"] = st.text_area("Devices you own (comma separated, latin characters only)")
-
+    lifestyle_options = ["active", "outdoor sports", "office work", "travel", "reading",
+                         "music", "gaming", "creative", "family", "health"]
+    new_user["lifestyle"] = ",".join(st.multiselect("Lifestyle Preferences (choose up to 5)", lifestyle_options, max_selections=5))
+    
+    goals_options = ["health", "entertainment", "productivity", "creativity", "education",
+                     "networking", "fitness", "career", "travel", "personal growth"]
+    new_user["goals"] = ",".join(st.multiselect("Your Goals (choose up to 5)", goals_options, max_selections=5))
+    
+    devices_options = ["iPhone", "iPad", "Mac", "Windows PC", "Android Phone", "AirPods",
+                       "Camera", "Smartwatch", "Tablet", "Gaming Console"]
+    new_user["devices_owned"] = ",".join(st.multiselect("Devices you own", devices_options))
+    
     if st.button("Create Account"):
         missing, nonlatin = validate_user_input(new_user)
         if missing:
@@ -112,6 +80,40 @@ def signup():
         st.success("🎉 Account created successfully! Please login.")
         st.session_state["page"] = "login"
 
+# ----------------- Login Function -----------------
+def login():
+    st.markdown("## 👋 Welcome (back)")
+    username_or_email = st.text_input("Username or Email")
+    password = st.text_input("Password", type="password")
+
+    col1, col2 = st.columns(2)
+    if col1.button("Login"):
+        user_row = users_df[
+            ((users_df['username'] == username_or_email) | 
+             (users_df['E-mail'] == username_or_email)) &
+            (users_df['password'] == password)
+        ]
+        if not user_row.empty:
+            st.session_state["user"] = user_row.iloc[0].to_dict()
+            st.success(f"✅ Welcome {st.session_state['user']['first_name']}!")
+            st.session_state["page"] = "recommendations"
+        else:
+            st.error("❌ Wrong Username/E-mail or Password")
+            
+            user_check = users_df[
+                (users_df['username'] == username_or_email) |
+                (users_df['E-mail'] == username_or_email)
+            ]
+            if not user_check.empty:
+                if col2.button("📧 Recover Password"):
+                    st.info(f"Password recovery sent to: {user_check.iloc[0]['E-mail']}")
+
+    st.markdown("---")
+    st.write("Not signed up yet?")
+    if st.button("👉 Sign up"):
+        st.session_state["page"] = "signup"
+
+# ----------------- Recommendations Function -----------------
 def recommendations():
     st.markdown("## 🎯 Personalized Recommendations")
 
@@ -148,5 +150,6 @@ elif st.session_state["page"] == "signup":
     signup()
 elif st.session_state["page"] == "recommendations":
     recommendations()
+
 
 
