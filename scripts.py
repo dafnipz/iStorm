@@ -23,7 +23,7 @@ def login():
         # Έλεγχος χρήστη με username ή email
         user_row = users_df[
             ((users_df['username'] == username_or_email) |
-             (users_df['email'] == username_or_email)) &
+             (users_df['E-mail'] == username_or_email)) &
             (users_df['password'] == password)
         ]
 
@@ -33,21 +33,20 @@ def login():
             st.session_state["page"] = "recommendations"
         else:
             st.error("❌ Λάθος Username/E-mail ή Κωδικός")
-
             col1, col2 = st.columns(2)
 
             with col1:
-                if st.button("🔄 Προσπάθησε ξανά", key="retry"):
+                if st.button("🔄 Προσπάθησε ξανά"):
                     st.session_state["page"] = "login"
 
             with col2:
                 user_check = users_df[
                     (users_df['username'] == username_or_email) |
-                    (users_df['email'] == username_or_email)
+                    (users_df['E-mail'] == username_or_email)
                 ]
                 if not user_check.empty:
-                    if st.button("📧 Ανάκτηση Κωδικού", key="recover"):
-                        st.info(f"📧 Σου στείλαμε mail στο: {user_check.iloc[0]['email']}")
+                    if st.button("📧 Ανάκτηση Κωδικού"):
+                        st.info(f"Σου στείλαμε mail στο: {user_check.iloc[0]['E-mail']}")
 
     st.markdown("---")
     st.write("Not signed up yet?")
@@ -59,13 +58,16 @@ def signup():
 
     new_user = {}
     new_user["username"] = st.text_input("Choose a username")
-    new_user["email"] = st.text_input("Email")
+    new_user["E-mail"] = st.text_input("Email")
     new_user["password"] = st.text_input("Password", type="password")
     new_user["first_name"] = st.text_input("First name")
     new_user["last_name"] = st.text_input("Last name")
-    new_user["dob"] = st.date_input("Date of Birth", value=datetime(1990, 1, 1),
-                                    min_value=datetime(1, 1, 1),
-                                    max_value=datetime.now())
+    new_user["dob"] = st.date_input(
+        "Date of Birth", 
+        value=datetime(1990, 1, 1),
+        min_value=datetime(1, 1, 1),
+        max_value=datetime.now()
+    )
     new_user["city"] = st.text_input("City")
     new_user["profession"] = st.text_input("Profession")
     new_user["interests"] = st.text_area("Interests (comma separated)")
@@ -117,6 +119,8 @@ elif st.session_state["page"] == "signup":
     signup()
 elif st.session_state["page"] == "recommendations":
     recommendations()
+
+
 
 
 
