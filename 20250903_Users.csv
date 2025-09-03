@@ -1,0 +1,11 @@
+﻿username;password;first_name;last_name;dob;city;profession;interests;budget;tech_level;lifestyle;goals;devices_owned
+nikos123;pass2025;Νίκος;Παπαδόπουλος;12/5/1993;Αθήνα;Diver;fitness,travel,tech;high;advanced;outdoor sports,travel;health,entertainment;iPhone,Mac
+maria456;mar2025;Μαρία;Κωνσταντινίδου;22/8/1995;Θεσσαλονίκη;Marketing Specialist;fashion,travel,reading;medium;intermediate;office work,travel;creativity,entertainment;iPhone,AirPods
+giorgos789;gior2025;Γιώργος;Παπαδόπουλος;15/3/1988;Ηράκλειο;Software Engineer;tech,gaming,music;high;advanced;office work,home;productivity,entertainment;Mac,iPad
+eleni321;eleni2025;Ελένη;Δημητρίου;5/12/1983;Λάρισα;Teacher;reading,art,music;medium;intermediate;office work,home;creativity,education;iPad,AirPods
+kostas654;kostas2025;Κώστας;Βασιλείου;19/7/1990;Πάτρα;Photographer;photography,travel,tech;high;advanced;travel,outdoor sports;creativity,entertainment;Mac,Camera
+sofia987;sofia2025;Σοφία;Γεωργίου;30/11/2000;Καβάλα;Student;gaming,tech,music;low;beginner;home,study;entertainment,learning;iPhone
+andreas222;andreas2025;Ανδρέας;Παπαδόπουλος;17/2/2003;Αθήνα;Entrepreneur;tech,fitness,travel;high;advanced;office work,travel;productivity,health;Mac,iPhone,Apple Watch
+anna111;anna2025;Άννα;Βασιλείου;10/9/1998;Ρόδος;Designer;art,tech,fashion;medium;intermediate;office work,home;creativity,entertainment;iPad,AirPods
+petros333;petros2025;Πέτρος;Κωνσταντινίδης;23/6/1985;Σέρρες;Diver;fitness,travel,tech;high;advanced;outdoor sports,travel;health,entertainment;Apple Watch,iPhone
+eleni555;eleni555;Ελένη;Γεωργίου;5/1/1991;Κέρκυρα;Freelancer;travel,reading,tech;medium;intermediate;home,travel;productivity,creativity;Mac,iPad,AirPods
