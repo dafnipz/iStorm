@@ -112,5 +112,8 @@ if "page" not in st.session_state:
 
 if st.session_state["page"] == "login":
     login()
-elif st.session_state["page"] == "s_
+elif st.session_state["page"] == "signup":
+    signup()
+elif st.session_state["page"] == "recommendations":
+    recommendations()
 
