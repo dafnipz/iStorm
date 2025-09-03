@@ -36,7 +36,9 @@ def login():
     username_or_email = st.text_input("Username or Email")
     password = st.text_input("Password", type="password")
 
-    if st.button("Login"):
+    login_clicked = st.button("Login")
+
+    if login_clicked:
         user_row = users_df[
             ((users_df['username'] == username_or_email) |
              (users_df['E-mail'] == username_or_email)) &
@@ -49,12 +51,9 @@ def login():
             # Προσωρινό μήνυμα καλωσορίσματος
             placeholder = st.empty()
             placeholder.success(f"🎉 Welcome {st.session_state['user']['first_name']}! Redirecting to your recommendations...")
+            st.session_state["page"] = "recommendations"
             time.sleep(3)
             placeholder.empty()
-
-            # Πηγαίνουμε στη σελίδα προτάσεων
-            st.session_state["page"] = "recommendations"
-            st.experimental_rerun()
         else:
             st.error("❌ Λάθος Username/E-mail ή Κωδικός")
             
@@ -62,7 +61,6 @@ def login():
             with col1:
                 if st.button("🔄 Try Again"):
                     st.session_state["page"] = "login"
-                    st.experimental_rerun()
 
             with col2:
                 user_check = users_df[
@@ -79,7 +77,6 @@ def login():
     st.write("Not signed up yet?")
     if st.button("👉 Sign up"):
         st.session_state["page"] = "signup"
-        st.experimental_rerun()
 
 
 def signup():
@@ -185,6 +182,7 @@ elif st.session_state["page"] == "signup":
     signup()
 elif st.session_state["page"] == "recommendations":
     recommendations()
+
 
 
 
