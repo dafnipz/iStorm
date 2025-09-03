@@ -20,33 +20,35 @@ def login():
     password = st.text_input("Password", type="password")
 
     if st.button("Login"):
-        # Έλεγχος χρήστη με username ή E-mail
-        user_row = users_df[
-            ((users_df['username'] == username_or_email) |
-             (users_df['E-mail'] == username_or_email)) &
-            (users_df['password'] == password)
-        ]
+    # Έλεγχος χρήστη με username ή email
+    user_row = users_df[
+        ((users_df['username'] == username_or_email) |
+         (users_df['email'] == username_or_email)) &
+        (users_df['password'] == password)
+    ]
 
-        if not user_row.empty:
-            st.session_state["user"] = user_row.iloc[0].to_dict()
-            st.success(f"✅ Welcome {st.session_state['user']['first_name']}!")
-            st.session_state["page"] = "recommendations"
-        else:
-            st.error("❌ Λάθος Username/E-mail ή Κωδικός")
-            col1, col2 = st.columns(2)
+    if not user_row.empty:
+        st.session_state["user"] = user_row.iloc[0].to_dict()
+        st.success(f"✅ Welcome {st.session_state['user']['first_name']}!")
+        st.session_state["page"] = "recommendations"
+    else:
+        st.error("❌ Λάθος Username/E-mail ή Κωδικός")
+        
+        # Columns για παράλληλα κουμπιά
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("🔄 Προσπάθησε ξανά", key="retry"):
+                st.session_state["page"] = "login"
 
-            with col1:
-                if st.button("🔄 Προσπάθησε ξανά"):
-                    st.session_state["page"] = "login"
-
-            with col2:
-                user_check = users_df[
-                    (users_df['username'] == username_or_email) |
-                    (users_df['E-mail'] == username_or_email)
-                ]
-                if not user_check.empty:
-                    if st.button("📧 Ανάκτηση Κωδικού"):
-                        st.info(f"Σου στείλαμε mail στο: {user_check.iloc[0]['E-mail']}")
+        with col2:
+            user_check = users_df[
+                (users_df['username'] == username_or_email) |
+                (users_df['email'] == username_or_email)
+            ]
+            if not user_check.empty:
+                if st.button("📧 Ανάκτηση Κωδικού", key="recover"):
+                    st.info(f"Σου στείλαμε mail στο: {user_check.iloc[0]['email']}")
 
     st.markdown("---")
     st.write("Not signed up yet?")
@@ -116,4 +118,5 @@ elif st.session_state["page"] == "signup":
     signup()
 elif st.session_state["page"] == "recommendations":
     recommendations()
+
 
