@@ -14,15 +14,10 @@ products_df = pd.read_csv(products_file, sep=";")
 users_df.columns = users_df.columns.str.strip()
 products_df.columns = products_df.columns.str.strip()
 
-# ----------------- Helpers -----------------
+# ----------------- Συναρτήσεις -----------------
 def is_latin(s):
-    try:
-        s.encode('latin1')
-    except UnicodeEncodeError:
-        return False
-    return True
+    return all(ord(c) < 128 for c in str(s))
 
-# ----------------- Login -----------------
 def login():
     st.markdown("## 👋 Welcome (back)")
     username_or_email = st.text_input("Username or Email")
@@ -37,12 +32,10 @@ def login():
 
         if not user_row.empty:
             st.session_state["user"] = user_row.iloc[0].to_dict()
-            # Show welcome message for 3 seconds
-            st.success(f"🎉 Welcome {st.session_state['user']['first_name']}!")
-            time.sleep(3)
             st.session_state["page"] = "recommendations"
+            st.session_state["welcome_shown"] = False  # reset welcome
         else:
-            st.error("❌ Wrong Username/E-mail or Password")
+            st.error("❌ Λάθος Username/E-mail ή Κωδικός")
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("🔄 Try Again"):
@@ -53,102 +46,134 @@ def login():
                     (users_df['E-mail'] == username_or_email)
                 ]
                 if not user_check.empty:
-                    st.info("📧 Recover Password feature coming soon.")
+                    if st.button("📧 Recover Password"):
+                        st.info(f"Enter your email to reset password.")
 
     st.markdown("---")
     st.write("Not signed up yet?")
     if st.button("👉 Sign up"):
         st.session_state["page"] = "signup"
 
-# ----------------- Sign up -----------------
 def signup():
     st.markdown("## 📝 Sign Up")
-    new_user = {}
 
-    new_user["username"] = st.text_input("Choose a username (latin only)")
-    new_user["E-mail"] = st.text_input("E-mail (latin only)")
+    new_user = {}
+    errors = []
+
+    # ----------------- Inputs -----------------
+    new_user["username"] = st.text_input("Choose a username")
+    if new_user["username"] == "" or not is_latin(new_user["username"]):
+        errors.append("Username")
+
+    new_user["E-mail"] = st.text_input("E-mail")
+    if new_user["E-mail"] == "" or not is_latin(new_user["E-mail"]):
+        errors.append("E-mail")
+
     new_user["password"] = st.text_input("Password", type="password")
-    new_user["first_name"] = st.text_input("First name (latin only)")
-    new_user["last_name"] = st.text_input("Last name (latin only)")
-    new_user["dob"] = st.date_input("Date of Birth",
-                                    value=datetime(1990, 1, 1),
+    if new_user["password"] == "":
+        errors.append("Password")
+
+    new_user["first_name"] = st.text_input("First name")
+    if new_user["first_name"] == "" or not is_latin(new_user["first_name"]):
+        errors.append("First Name")
+
+    new_user["last_name"] = st.text_input("Last name")
+    if new_user["last_name"] == "" or not is_latin(new_user["last_name"]):
+        errors.append("Last Name")
+
+    # Date of birth
+    new_user["dob"] = st.date_input("Date of Birth", value=datetime(1990, 1, 1),
                                     min_value=datetime(1, 1, 1),
                                     max_value=datetime.now())
-    # Predefined lists
-    cities = ["Athens","Thessaloniki","Patras","Heraklion","Larissa","Volos","Ioannina","Chania","Rhodes"]
-    professions = ["Engineer","Doctor","Teacher","Student","Artist","Entrepreneur","Developer","Designer"]
-    budgets = ["low","medium","high"]
-    tech_levels = ["beginner","intermediate","advanced"]
-    interests_list = ["Fitness","Travel","Music","Reading","Cooking","Photography","Gaming","Sports","Technology","Art"]
-    lifestyle_list = ["Outdoor","Indoor","Social","Introvert","Active","Relaxed","Creative","Adventurous","Organized","Flexible"]
-    goals_list = ["Health","Career","Education","Travel","Creativity","Productivity","Finance","Entertainment","Networking","Self-improvement"]
-    devices_list = ["iPhone","Mac","iPad","PC","Camera","Smartwatch","Headphones","Tablet","Laptop","Other"]
 
-    new_user["city"] = st.selectbox("City", cities)
+    # Choose city from Greece
+    cities = ["Athens", "Thessaloniki", "Patras", "Heraklion", "Larissa", "Volos", "Ioannina", "Chania"]
+    new_user["city"] = st.selectbox("City of Residence", cities)
+
+    # Choose profession
+    professions = ["Student", "Teacher", "Engineer", "Doctor", "Artist", "Freelancer", "Retired", "Entrepreneur"]
     new_user["profession"] = st.selectbox("Profession", professions)
-    new_user["interests"] = st.multiselect("What interests you most? (pick up to 5)", interests_list, max_selections=5)
-    new_user["budget"] = st.selectbox("Budget", budgets)
-    new_user["tech_level"] = st.selectbox("Tech Level", tech_levels)
-    new_user["lifestyle"] = st.multiselect("Lifestyle Preferences", lifestyle_list, max_selections=5)
-    new_user["goals"] = st.multiselect("Your Goals", goals_list, max_selections=5)
-    new_user["devices_owned"] = st.multiselect("Devices you own", devices_list, max_selections=5)
 
-    # Validation
-    all_fields_filled = all([
-        new_user["username"], new_user["E-mail"], new_user["password"],
-        new_user["first_name"], new_user["last_name"], new_user["dob"],
-        new_user["city"], new_user["profession"], new_user["interests"],
-        new_user["budget"], new_user["tech_level"], new_user["lifestyle"],
-        new_user["goals"], new_user["devices_owned"]
-    ])
-    latin_fields = all(is_latin(str(new_user[k])) for k in ["username","E-mail","first_name","last_name"])
+    # Interests (multi-select)
+    interests_list = ["Fitness", "Travel", "Technology", "Cooking", "Gaming", "Music", "Photography", "Reading", "Art", "Sports"]
+    new_user["interests"] = st.multiselect("What are your main interests? (Choose up to 5)", interests_list)
+
+    new_user["budget"] = st.selectbox("Budget", ["low", "medium", "high"])
+    new_user["tech_level"] = st.selectbox("Tech Level", ["beginner", "intermediate", "advanced"])
+
+    lifestyle_list = ["Outdoor", "Indoor", "Social", "Solitary", "Family-oriented", "Work-focused", "Travel-loving", "Fitness-focused"]
+    new_user["lifestyle"] = st.multiselect("Lifestyle Preferences (Choose up to 5)", lifestyle_list)
+
+    goals_list = ["Health", "Education", "Career", "Creativity", "Entertainment", "Productivity", "Financial", "Travel"]
+    new_user["goals"] = st.multiselect("Your Goals (Choose up to 5)", goals_list)
+
+    devices_list = ["iPhone", "Android Phone", "iPad", "Laptop", "Desktop", "Mac", "PC", "Camera", "Smartwatch"]
+    new_user["devices_owned"] = st.multiselect("Devices you own", devices_list)
 
     if st.button("Create Account"):
-        if not all_fields_filled:
-            st.error("❌ All fields are required!")
-        elif not latin_fields:
-            st.error("❌ Only Latin characters allowed in username, email, first and last name.")
+        if errors:
+            st.error(f"❌ Please fill correctly: {', '.join(errors)}")
         else:
             global users_df
-            # Convert lists to comma-separated strings
-            for key in ["interests","lifestyle","goals","devices_owned"]:
-                new_user[key] = ",".join(new_user[key])
             users_df = pd.concat([users_df, pd.DataFrame([new_user])], ignore_index=True)
             st.success("🎉 Account created successfully! Please login.")
             st.session_state["page"] = "login"
 
-# ----------------- Recommendations -----------------
 def recommendations():
-    st.markdown("<div style='text-align: right;'>🔒 <button onclick=''>Logout</button></div>", unsafe_allow_html=True)
     user = st.session_state["user"]
 
-    st.markdown(f"## Welcome {user['first_name']}! Here's your personalized suggestions:")
+    # ----------------- Welcome Message -----------------
+    if not st.session_state.get("welcome_shown", False):
+        placeholder = st.empty()
+        placeholder.success(f"🎉 Welcome {user['first_name']}! Here are suggestions for you!")
+        time.sleep(3)
+        placeholder.empty()
+        st.session_state["welcome_shown"] = True
 
+    st.markdown("## 🎯 Personalized Recommendations")
+    
+    # Filter recommendations
     recs = products_df[
         (products_df['target_profession'].isin([user["profession"], "All"])) |
         (products_df['target_interests'].apply(lambda x: any(i in user["interests"] for i in str(x).split(","))))
     ]
 
-    # Split into products and services
-    products = recs[recs['category'].str.lower() == "product"]
-    services = recs[recs['category'].str.lower() == "service"]
+    # ----------------- Products -----------------
+    product_recs = recs[recs['category'].str.lower().str.contains("product")].head(2)
+    if not product_recs.empty:
+        st.markdown("### 🛍️ Products")
+        cols = st.columns(len(product_recs))
+        for idx, (_, row) in enumerate(product_recs.iterrows()):
+            with cols[idx]:
+                st.markdown(f"""
+                    <div style="padding:15px; border:1px solid #eee; border-radius:10px; box-shadow: 2px 2px 5px #ddd;">
+                        <h4 style="color:#4CAF50;">{row['name']}</h4>
+                        <p>💰 Price: {row['price']} €</p>
+                        <p>📌 Category: {row['category']}</p>
+                        <a href="{row['url']}" target="_blank">🔗 Learn more</a>
+                    </div>
+                    """, unsafe_allow_html=True)
+                if st.button(f"➕ Add {row['name']} to Cart", key=row["id"]):
+                    st.success(f"✅ {row['name']} added to cart!")
 
-    # Display two columns for products
-    prod_cols = st.columns(2)
-    for i, (_, row) in enumerate(products.head(2).iterrows()):
-        with prod_cols[i%2]:
-            st.image(row["image_url"] if "image_url" in row else "", use_column_width=True)
-            st.subheader(row["name"])
-            st.write(f"💰 Price: {row['price']} €")
-            st.write(f"📌 Category: {row['category']}")
+    # ----------------- Services -----------------
+    service_recs = recs[recs['category'].str.lower().str.contains("service")].head(2)
+    if not service_recs.empty:
+        st.markdown("### 🛠️ Services")
+        cols = st.columns(len(service_recs))
+        for idx, (_, row) in enumerate(service_recs.iterrows()):
+            with cols[idx]:
+                st.markdown(f"""
+                    <div style="padding:15px; border:1px solid #eee; border-radius:10px; box-shadow: 2px 2px 5px #ddd;">
+                        <h4 style="color:#2196F3;">{row['name']}</h4>
+                        <p>📌 Category: {row['category']}</p>
+                        <a href="{row['url']}" target="_blank">🔗 Learn more</a>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-    # Display two columns for services below products
-    serv_cols = st.columns(2)
-    for i, (_, row) in enumerate(services.head(2).iterrows()):
-        with serv_cols[i%2]:
-            st.subheader(row["name"])
-            st.write(f"💰 Price: {row['price']} €")
-            st.write(f"📌 Category: {row['category']}")
+    if st.button("🔒 Logout"):
+        st.session_state.clear()
+        st.session_state["page"] = "login"
 
 # ----------------- Navigation -----------------
 if "page" not in st.session_state:
@@ -160,3 +185,5 @@ elif st.session_state["page"] == "signup":
     signup()
 elif st.session_state["page"] == "recommendations":
     recommendations()
+
+
