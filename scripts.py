@@ -28,6 +28,9 @@ def validate_user_input(user):
     return errors
 
 # ----------------- Συναρτήσεις -----------------
+import streamlit as st
+import time
+
 def login():
     st.markdown("## 👋 Welcome (back)")
     username_or_email = st.text_input("Username or Email")
@@ -42,27 +45,42 @@ def login():
 
         if not user_row.empty:
             st.session_state["user"] = user_row.iloc[0].to_dict()
-            st.success(f"✅ Welcome {st.session_state['user']['first_name']}!")
+            
+            # Προσωρινό μήνυμα καλωσορίσματος
+            placeholder = st.empty()
+            placeholder.success(f"🎉 Welcome {st.session_state['user']['first_name']}! Redirecting to your recommendations...")
+            time.sleep(3)
+            placeholder.empty()
+
+            # Πηγαίνουμε στη σελίδα προτάσεων
             st.session_state["page"] = "recommendations"
+            st.experimental_rerun()
         else:
             st.error("❌ Λάθος Username/E-mail ή Κωδικός")
+            
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("🔄 Try Again"):
                     st.session_state["page"] = "login"
+                    st.experimental_rerun()
+
             with col2:
                 user_check = users_df[
                     (users_df['username'] == username_or_email) |
                     (users_df['E-mail'] == username_or_email)
                 ]
                 if not user_check.empty:
-                    if st.button("📧 Recover Password"):
-                        st.info(f"Enter your email to reset password.")
+                    st.warning("Forgot your password?")
+                    email_input = st.text_input("Enter your email to reset password")
+                    if st.button("📧 Send Reset Link"):
+                        st.info(f"A password reset link has been sent to: {email_input}")
 
     st.markdown("---")
     st.write("Not signed up yet?")
     if st.button("👉 Sign up"):
         st.session_state["page"] = "signup"
+        st.experimental_rerun()
+
 
 def signup():
     st.markdown("## 📝 Sign Up")
@@ -167,6 +185,7 @@ elif st.session_state["page"] == "signup":
     signup()
 elif st.session_state["page"] == "recommendations":
     recommendations()
+
 
 
 
