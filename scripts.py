@@ -20,9 +20,9 @@ def login():
     password = st.text_input("Password", type="password")
 
     if st.button("Login"):
-        # Έλεγχος χρήστη
+        # Έλεγχος χρήστη με username ή email
         user_row = users_df[
-            ((users_df['username'] == username_or_email) | 
+            ((users_df['username'] == username_or_email) |
              (users_df['email'] == username_or_email)) &
             (users_df['password'] == password)
         ]
@@ -32,18 +32,21 @@ def login():
             st.success(f"✅ Welcome {st.session_state['user']['first_name']}!")
             st.session_state["page"] = "recommendations"
         else:
-            st.error("❌ Username/Password incorrect")
-            # Έλεγχος αν υπάρχει ο χρήστης (για recover)
-            user_check = users_df[
-                (users_df['username'] == username_or_email) |
-                (users_df['email'] == username_or_email)
-            ]
-            if not user_check.empty:
-                st.warning("Ξέχασες τον κωδικό σου;")
-                if st.button("Recover password"):
-                    st.info(f"📧 Σου στείλαμε mail στο: {user_check.iloc[0]['email']}")
-            else:
-                st.info("Ο χρήστης δεν βρέθηκε. Θέλεις να κάνεις εγγραφή;")
+            st.error("❌ Λάθος Username/E-mail ή Κωδικός")
+            col1, col2 = st.columns(2)
+
+            with col1:
+                if st.button("🔄 Προσπάθησε ξανά"):
+                    st.session_state["page"] = "login"
+
+            with col2:
+                user_check = users_df[
+                    (users_df['username'] == username_or_email) |
+                    (users_df['email'] == username_or_email)
+                ]
+                if not user_check.empty:
+                    if st.button("📧 Ανάκτηση Κωδικού"):
+                        st.info(f"Σου στείλαμε mail στο: {user_check.iloc[0]['email']}")
 
     st.markdown("---")
     st.write("Not signed up yet?")
@@ -72,7 +75,6 @@ def signup():
     new_user["devices_owned"] = st.text_area("Devices Owned (comma separated)")
 
     if st.button("Create Account"):
-        # append τον νέο χρήστη (προσοχή: δεν σώζεται πίσω στο GitHub, μόνο runtime!)
         global users_df
         users_df = pd.concat([users_df, pd.DataFrame([new_user])], ignore_index=True)
         st.success("🎉 Account created successfully! Please login.")
@@ -84,7 +86,6 @@ def recommendations():
     user = st.session_state["user"]
     st.write(f"Hello {user['first_name']} 👋, here are your suggestions:")
 
-    # Φιλτράρισμα προϊόντων
     recs = products_df[
         (products_df['target_profession'].isin([user["profession"], "All"])) |
         (products_df['target_interests'].apply(lambda x: any(i in user["interests"] for i in str(x).split(","))))
@@ -115,6 +116,3 @@ elif st.session_state["page"] == "signup":
     signup()
 elif st.session_state["page"] == "recommendations":
     recommendations()
-
-
-
