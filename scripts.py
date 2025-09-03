@@ -9,87 +9,106 @@ products_file = "https://raw.githubusercontent.com/dafnipz/iStorm/main/20250903_
 users_df = pd.read_csv(users_file, sep=";")
 products_df = pd.read_csv(products_file, sep=";")
 
+# Καθαρισμός whitespace στα ονόματα στηλών
 users_df.columns = users_df.columns.str.strip()
 products_df.columns = products_df.columns.str.strip()
 
 # ----------------- Συναρτήσεις -----------------
 def login():
     st.markdown("## 👋 Welcome (back)")
-    username_or_email = st.text_input("Username or Email", key="login_input")
-    password = st.text_input("Password", type="password", key="login_pass")
+
+    username_or_email = st.text_input("Username or Email", help="Enter your username or email to login")
+    password = st.text_input("Password", type="password", help="Enter your password")
 
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("🔄 Προσπάθησε ξανά"):
-            st.session_state["page"] = "login"
+        login_btn = st.button("Login")
     with col2:
-        if st.button("📧 Ανάκτηση Κωδικού"):
-            st.session_state["page"] = "recover_password"
+        recover_btn = st.button("Recover Password")
 
-    if st.button("Login", key="login_button"):
+    if login_btn:
         user_row = users_df[
             ((users_df['username'] == username_or_email) |
              (users_df['E-mail'] == username_or_email)) &
             (users_df['password'] == password)
         ]
+
         if not user_row.empty:
             st.session_state["user"] = user_row.iloc[0].to_dict()
             st.success(f"✅ Welcome {st.session_state['user']['first_name']}!")
             st.session_state["page"] = "recommendations"
         else:
-            st.error("❌ Λάθος Username/E-mail ή Κωδικός")
+            st.error("❌ Wrong Username/E-mail or Password")
+
+    if recover_btn:
+        st.info("Enter your email to recover your password:")
+        recover_email = st.text_input("Email")
+        if st.button("Send Recovery Link"):
+            user_check = users_df[users_df['E-mail'] == recover_email]
+            if not user_check.empty:
+                st.success(f"📧 Recovery link sent to: {recover_email}")
+            else:
+                st.warning("⚠️ Email not found in our database.")
 
     st.markdown("---")
     st.write("Not signed up yet?")
     if st.button("👉 Sign up"):
         st.session_state["page"] = "signup"
 
-def recover_password():
-    st.markdown("## 🔑 Recover Password")
-    email = st.text_input("Enter your registered email", key="recover_email")
-    if st.button("Send recovery link"):
-        user_row = users_df[users_df['E-mail'] == email]
-        if not user_row.empty:
-            st.success("📧 Έχουμε στείλει ένα link στο email σου (υποθετικό).")
-            st.session_state["recover_user"] = email
-            st.session_state["page"] = "reset_password"
-        else:
-            st.error("❌ Email δεν βρέθηκε!")
-
-def reset_password():
-    st.markdown("## 🔑 Set New Password")
-    new_pass = st.text_input("New Password", type="password", key="new_pass")
-    confirm_pass = st.text_input("Confirm New Password", type="password", key="confirm_pass")
-
-    if st.button("Reset Password"):
-        if new_pass != confirm_pass:
-            st.error("❌ Οι κωδικοί δεν ταιριάζουν!")
-        else:
-            email = st.session_state.get("recover_user")
-            users_df.loc[users_df['E-mail'] == email, 'password'] = new_pass
-            st.success("✅ Ο κωδικός άλλαξε επιτυχώς! Κάνε login με τον νέο κωδικό.")
-            st.session_state["page"] = "login"
-
 def signup():
     st.markdown("## 📝 Sign Up")
 
     new_user = {}
-    new_user["username"] = st.text_input("Choose a username")
-    new_user["E-mail"] = st.text_input("Email")
-    new_user["password"] = st.text_input("Password", type="password")
-    new_user["first_name"] = st.text_input("First name")
-    new_user["last_name"] = st.text_input("Last name")
-    new_user["dob"] = st.date_input("Date of Birth", value=datetime(1990, 1, 1),
-                                    min_value=datetime(1, 1, 1),
-                                    max_value=datetime.now())
-    new_user["city"] = st.text_input("City")
-    new_user["profession"] = st.text_input("Profession")
-    new_user["interests"] = st.text_area("Interests (comma separated)")
-    new_user["budget"] = st.selectbox("Budget", ["low", "medium", "high"])
-    new_user["tech_level"] = st.selectbox("Tech Level", ["beginner", "intermediate", "advanced"])
-    new_user["lifestyle"] = st.text_area("Lifestyle (comma separated)")
-    new_user["goals"] = st.text_area("Goals (comma separated)")
-    new_user["devices_owned"] = st.text_area("Devices Owned (comma separated)")
+    new_user["username"] = st.text_input("Choose a username", help="The username you'll use to log in")
+    new_user["E-mail"] = st.text_input("Email", help="Provide a valid email for password recovery")
+    new_user["password"] = st.text_input("Password", type="password", help="Choose a strong password")
+    new_user["first_name"] = st.text_input("First name", help="Your first name")
+    new_user["last_name"] = st.text_input("Last name", help="Your last name")
+    new_user["dob"] = st.date_input(
+        "Date of Birth", 
+        value=datetime(1990, 1, 1),
+        min_value=datetime(1, 1, 1),
+        max_value=datetime.now(),
+        help="Your birth date"
+    )
+    new_user["city"] = st.text_input("City", help="Where do you live?")
+    new_user["profession"] = st.text_input("Profession", help="Your current profession")
+
+    new_user["interests"] = st.multiselect(
+        "What are your main interests? (Choose up to 5)",
+        options=["Fitness", "Travel", "Tech", "Music", "Reading", "Photography", "Art", "Gaming", "Cooking", "Fashion"],
+        help="Select up to 5 topics that interest you"
+    )
+
+    new_user["lifestyle"] = st.multiselect(
+        "What best describes your lifestyle? (Choose up to 3)",
+        options=["Office work", "Home-based", "Outdoor sports", "Travel frequently", "Student", "Freelancer", "Entrepreneur"],
+        help="Select up to 3 lifestyle types"
+    )
+
+    new_user["goals"] = st.multiselect(
+        "What are your main goals? (Choose up to 3)",
+        options=["Productivity", "Health", "Creativity", "Learning", "Entertainment", "Travel", "Networking"],
+        help="Select up to 3 personal goals"
+    )
+
+    new_user["devices_owned"] = st.multiselect(
+        "Which devices do you own?",
+        options=["iPhone", "Mac", "iPad", "Apple Watch", "AirPods", "Camera", "Windows PC", "Android phone", "Tablet", "Other"],
+        help="Select all devices you currently own"
+    )
+
+    new_user["budget"] = st.selectbox(
+        "Budget", 
+        ["Low", "Medium", "High"],
+        help="Your preferred price range for products"
+    )
+
+    new_user["tech_level"] = st.selectbox(
+        "Tech Level", 
+        ["Beginner", "Intermediate", "Advanced"],
+        help="Your level of technology expertise"
+    )
 
     if st.button("Create Account"):
         global users_df
@@ -106,8 +125,9 @@ def recommendations():
         (products_df['target_profession'].isin([user["profession"], "All"])) |
         (products_df['target_interests'].apply(lambda x: any(i in user["interests"] for i in str(x).split(","))))
     ]
+
     if recs.empty:
-        st.info("Δεν βρέθηκαν προτάσεις για εσένα 🙁")
+        st.info("No recommendations found for you 🙁")
     else:
         for _, row in recs.iterrows():
             st.subheader(row["name"])
@@ -129,18 +149,5 @@ if st.session_state["page"] == "login":
     login()
 elif st.session_state["page"] == "signup":
     signup()
-elif st.session_state["page"] == "recover_password":
-    recover_password()
-elif st.session_state["page"] == "reset_password":
-    reset_password()
 elif st.session_state["page"] == "recommendations":
     recommendations()
-
-
-
-
-
-
-
-
-
