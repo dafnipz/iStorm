@@ -4,7 +4,7 @@ from datetime import datetime
 
 # ----------------- Φόρτωση δεδομένων -----------------
 users_file = "https://raw.githubusercontent.com/dafnipz/iStorm/main/20250903_Users.csv"
-products_file = "https://raw.githubusercontent.com/dafnipz/iStorm/main/20250903_ProductList.csv"
+products_file = "https://raw.githubusercontent.com/dafnipz/iStorm/refs/heads/main/20250903_ProductList.csv"
 
 users_df = pd.read_csv(users_file, sep=";")
 products_df = pd.read_csv(products_file, sep=";")
@@ -167,6 +167,7 @@ elif st.session_state["page"] == "signup":
     signup()
 elif st.session_state["page"] == "recommendations":
     recommendations()
+
 
 
 
