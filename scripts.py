@@ -1,24 +1,24 @@
 import streamlit as st
 import pandas as pd
 import os
+from datetime import date
 import openai
 
 # ======================
-# CONFIG OpenAI API
+# OpenAI API
 # ======================
-openai.api_key = os.getenv("OPENAI_API_KEY")  # Βάλτε το secret στο Streamlit Cloud
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # ======================
-# LOAD CSVs FROM GITHUB
+# LOAD CSVs
 # ======================
 users_file = "https://raw.githubusercontent.com/dafnipz/iStorm/refs/heads/main/20250903_Users.csv"
 products_file = "https://raw.githubusercontent.com/dafnipz/iStorm/refs/heads/main/20250903_ProductList.csv"
 
-# Διαβάζουμε τα CSV
 users_df = pd.read_csv(users_file, sep=';', encoding='utf-8')
 products_df = pd.read_csv(products_file, sep=';', encoding='utf-8')
 
-# Καθαρισμός στηλών Users
+# Clean & rename columns
 users_df.columns = users_df.columns.str.strip()
 users_df.rename(columns={
     users_df.columns[0]: 'username',
@@ -37,11 +37,11 @@ users_df.rename(columns={
 }, inplace=True)
 
 # ======================
-# STREAMLIT UI
+# Streamlit UI
 # ======================
 st.title("iStorm Apple Store")
 
-menu = ["Login", "Sign Up"]
+menu = ["Login", "Sign Up", "Forgot Password"]
 choice = st.sidebar.selectbox("Menu", menu)
 
 # ======================
@@ -51,9 +51,10 @@ if choice == "Sign Up":
     st.subheader("Create a new account")
     new_username = st.text_input("Username")
     new_password = st.text_input("Password", type='password')
+    email = st.text_input("Email")
     first_name = st.text_input("First Name")
     last_name = st.text_input("Last Name")
-    dob = st.date_input("Date of Birth")
+    dob = st.date_input("Date of Birth", min_value=date(1,1,1), max_value=date.today())
     city = st.text_input("City")
     profession = st.text_input("Profession")
     interests = st.text_input("Interests (comma separated)")
@@ -66,11 +67,13 @@ if choice == "Sign Up":
     if st.button("Sign Up"):
         if new_username in users_df['username'].values:
             st.warning("Username already exists!")
+        elif email in users_df['email'].values if 'email' in users_df.columns else False:
+            st.warning("Email already used!")
         else:
-            # Προσθήκη user στο DataFrame (προσωρινά, δεν γράφει στο GitHub)
             new_row = {
                 "username": new_username,
                 "password": new_password,
+                "email": email,
                 "first_name": first_name,
                 "last_name": last_name,
                 "dob": str(dob),
@@ -99,14 +102,11 @@ if choice == "Login":
         if not user_row.empty:
             st.success(f"Welcome {user_row.iloc[0]['first_name']}!")
 
-            # ======================
-            # AI RECOMMENDATIONS (sample)
-            # ======================
+            # AI Recommendations sample
             st.subheader("Recommended for you:")
             profession = user_row.iloc[0]['profession']
             interests = user_row.iloc[0]['interests'].split(",")
 
-            # Φιλτράρουμε products και services για το demo
             recommended = products_df[
                 (products_df['target_profession'].str.contains(profession, case=False)) |
                 (products_df['target_interests'].apply(lambda x: any(i.lower() in x.lower() for i in interests)))
@@ -120,3 +120,21 @@ if choice == "Login":
 
         else:
             st.error("Username/Password incorrect")
+
+# ======================
+# FORGOT PASSWORD
+# ======================
+if choice == "Forgot Password":
+    st.subheader("Recover your password")
+    email_input = st.text_input("Enter your registered email")
+    if st.button("Recover Password"):
+        if 'email' not in users_df.columns:
+            st.error("No email information available.")
+        else:
+            user_row = users_df[users_df['email'] == email_input]
+            if not user_row.empty:
+                st.info(f"Your username: {user_row.iloc[0]['username']}")
+                st.info(f"Your password: {user_row.iloc[0]['password']}")
+            else:
+                st.error("Email not found")
+
