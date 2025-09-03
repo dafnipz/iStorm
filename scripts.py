@@ -21,9 +21,15 @@ def is_latin(s, allow_email=False):
     return re.match(r'^[A-Za-z0-9 ,]*$', s) is not None
 
 def validate_user_input(user):
+    # Ποια πεδία ελέγχουμε για κενά
     missing = [k for k,v in user.items() if v in ("", [], None)]
-    nonlatin = [k for k,v in user.items() if k != "E-mail" and not is_latin(str(v))]
+
+    # Μόνο τα πεδία που γράφει ελεύθερα ο χρήστης και θέλουμε latin check
+    free_text_fields = ["username", "first_name", "last_name", "password"]
+    nonlatin = [k for k in free_text_fields if k in user and not is_latin(str(user[k]))]
+    
     return missing, nonlatin
+
 
 # ----------------- Συναρτήσεις -----------------
 def login():
@@ -152,6 +158,7 @@ elif st.session_state["page"] == "signup":
     signup()
 elif st.session_state["page"] == "recommendations":
     recommendations()
+
 
 
 
