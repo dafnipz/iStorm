@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import time
+import requests
+from bs4 import BeautifulSoup
 
 # ----------------- Φόρτωση δεδομένων -----------------
 users_file = "https://raw.githubusercontent.com/dafnipz/iStorm/main/20250903_Users.csv"
@@ -10,7 +12,6 @@ products_file = "https://raw.githubusercontent.com/dafnipz/iStorm/main/20250903_
 users_df = pd.read_csv(users_file, sep=";")
 products_df = pd.read_csv(products_file, sep=";")
 
-# Καθαρισμός whitespace στα ονόματα στηλών
 users_df.columns = users_df.columns.str.strip()
 products_df.columns = products_df.columns.str.strip()
 
@@ -29,11 +30,10 @@ def login():
              (users_df['E-mail'] == username_or_email)) &
             (users_df['password'] == password)
         ]
-
         if not user_row.empty:
             st.session_state["user"] = user_row.iloc[0].to_dict()
             st.session_state["page"] = "recommendations"
-            st.session_state["welcome_shown"] = False  # reset welcome
+            st.session_state["welcome_shown"] = False
         else:
             st.error("❌ Λάθος Username/E-mail ή Κωδικός")
             col1, col2 = st.columns(2)
@@ -56,11 +56,9 @@ def login():
 
 def signup():
     st.markdown("## 📝 Sign Up")
-
     new_user = {}
     errors = []
 
-    # ----------------- Inputs -----------------
     new_user["username"] = st.text_input("Choose a username")
     if new_user["username"] == "" or not is_latin(new_user["username"]):
         errors.append("Username")
@@ -81,20 +79,15 @@ def signup():
     if new_user["last_name"] == "" or not is_latin(new_user["last_name"]):
         errors.append("Last Name")
 
-    # Date of birth
-    new_user["dob"] = st.date_input("Date of Birth", value=datetime(1990, 1, 1),
-                                    min_value=datetime(1, 1, 1),
-                                    max_value=datetime.now())
+    new_user["dob"] = st.date_input("Date of Birth", value=datetime(1990,1,1),
+                                    min_value=datetime(1,1,1), max_value=datetime.now())
 
-    # Choose city from Greece
     cities = ["Athens", "Thessaloniki", "Patras", "Heraklion", "Larissa", "Volos", "Ioannina", "Chania"]
     new_user["city"] = st.selectbox("City of Residence", cities)
 
-    # Choose profession
     professions = ["Student", "Teacher", "Engineer", "Doctor", "Artist", "Freelancer", "Retired", "Entrepreneur"]
     new_user["profession"] = st.selectbox("Profession", professions)
 
-    # Interests (multi-select)
     interests_list = ["Fitness", "Travel", "Technology", "Cooking", "Gaming", "Music", "Photography", "Reading", "Art", "Sports"]
     new_user["interests"] = st.multiselect("What are your main interests? (Choose up to 5)", interests_list)
 
@@ -122,7 +115,6 @@ def signup():
 def recommendations():
     user = st.session_state["user"]
 
-    # ----------------- Welcome Message -----------------
     if not st.session_state.get("welcome_shown", False):
         placeholder = st.empty()
         placeholder.success(f"🎉 Welcome {user['first_name']}! Here are suggestions for you!")
@@ -132,13 +124,11 @@ def recommendations():
 
     st.markdown("## 🎯 Personalized Recommendations")
     
-    # Filter recommendations
     recs = products_df[
         (products_df['target_profession'].isin([user["profession"], "All"])) |
         (products_df['target_interests'].apply(lambda x: any(i in user["interests"] for i in str(x).split(","))))
     ]
 
-    # ----------------- Products -----------------
     product_recs = recs[recs['category'].str.lower().str.contains("product")].head(2)
     if not product_recs.empty:
         st.markdown("### 🛍️ Products")
@@ -156,7 +146,6 @@ def recommendations():
                 if st.button(f"➕ Add {row['name']} to Cart", key=row["id"]):
                     st.success(f"✅ {row['name']} added to cart!")
 
-    # ----------------- Services -----------------
     service_recs = recs[recs['category'].str.lower().str.contains("service")].head(2)
     if not service_recs.empty:
         st.markdown("### 🛠️ Services")
@@ -171,9 +160,54 @@ def recommendations():
                     </div>
                     """, unsafe_allow_html=True)
 
+    st.markdown("---")
+    if st.button("🔍 Browse Apple Products"):
+        st.session_state["page"] = "apple_browser"
     if st.button("🔒 Logout"):
         st.session_state.clear()
         st.session_state["page"] = "login"
+
+def apple_browsing():
+    st.markdown("## 🍏 Apple Product Browser")
+    query = st.text_input("Search for an Apple product", "iPhone 15")
+
+    if st.button("Search Apple Products"):
+        st.info(f"Searching for '{query}' across multiple sites...")
+
+        # --- Amazon.gr ---
+        amazon_url = f"https://www.amazon.gr/s?k={query.replace(' ', '+')}"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        try:
+            r = requests.get(amazon_url, headers=headers)
+            soup = BeautifulSoup(r.text, "html.parser")
+            results = soup.select("div.s-result-item h2 a")[:3]
+            st.markdown("### Amazon.gr Results")
+            for i, item in enumerate(results):
+                name = item.get_text()
+                link = "https://www.amazon.gr" + item.get("href")
+                st.markdown(f"**{i+1}. {name}**")
+                st.markdown(f"[View on Amazon]({link})")
+        except:
+            st.error("Error fetching Amazon results.")
+
+        # --- Skroutz.gr ---
+        try:
+            skroutz_url = f"https://www.skroutz.gr/c/{3001}-smartphones?q={query.replace(' ', '+')}"
+            r2 = requests.get(skroutz_url)
+            soup2 = BeautifulSoup(r2.text, "html.parser")
+            results2 = soup2.select("h2.sku-title a")[:3]
+            st.markdown("### Skroutz.gr Results")
+            for i, item in enumerate(results2):
+                name = item.get_text().strip()
+                link = "https://www.skroutz.gr" + item.get("href")
+                st.markdown(f"**{i+1}. {name}**")
+                st.markdown(f"[View on Skroutz]({link})")
+        except:
+            st.error("Error fetching Skroutz results.")
+
+    st.markdown("---")
+    if st.button("🔙 Back to Recommendations"):
+        st.session_state["page"] = "recommendations"
 
 # ----------------- Navigation -----------------
 if "page" not in st.session_state:
@@ -185,5 +219,8 @@ elif st.session_state["page"] == "signup":
     signup()
 elif st.session_state["page"] == "recommendations":
     recommendations()
+elif st.session_state["page"] == "apple_browser":
+    apple_browsing()
+
 
 
